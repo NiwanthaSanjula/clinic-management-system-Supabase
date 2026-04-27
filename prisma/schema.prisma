@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Role enum - only two possible values for staff
+// Patient role is handled separately (they logged in via portal, no staff system)
+enum Role {
+  DOCTOR
+  ASSISTANT
+}
+
+// Profile table - extends Supabase's built-in auth.users table
+// When a stafff member signs up, we create a Profile row
+// The id here MATCHES the id in Supabase Auth exactly
+model Profile {
+  id        String   @id
+  role      Role
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles") // actual table name in supabase db
+}
+
+// AuditLog - track every important action in clinic
+// Built now so every future features can use it from the start
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String // Who did the action
+  action     String // e.g. "CREATE_PATIENT", "UPDATE_APPOINTMENT"
+  entityType String // e.g. "Patient", "Appointment"
+  entityId   String // the ID of the thing that changed
+  oldValue   Json? // what it looked like before(optional)
+  newValue   Json? // what it looks like now(optional)
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// Patient - people who visit the clinic
+// They can also have a portal account (patientAuthId links to Supabase auth)
+model Patient {
+  id             String    @id @default(cuid())
+  nic            String    @unique
+  name           String
+  dateOfBirth    DateTime?
+  gender         String?
+  phone          String
+  email          String?
+  address        String?
+  bloodGroup     String?
+  knownAllergies String?
+
+  // portal access - null if patient hasn't registered for portal yet
+  patientAuthId String? @unique // links to Supabase auth.users.id
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("patients")
+}
