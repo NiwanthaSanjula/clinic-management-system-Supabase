@@ -17,6 +17,7 @@ datasource db {
 enum Role {
   DOCTOR
   ASSISTANT
+  PATIENT
 }
 
 // Profile table - extends Supabase's built-in auth.users table
@@ -28,6 +29,8 @@ model Profile {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  patient Patient? // only exists if role is PATIENT
 
   @@map("profiles") // actual table name in supabase db
 }
@@ -51,8 +54,8 @@ model AuditLog {
 // They can also have a portal account (patientAuthId links to Supabase auth)
 model Patient {
   id             String    @id @default(cuid())
+  profile        Profile   @relation(fields: [id], references: [id])
   nic            String    @unique
-  name           String
   dateOfBirth    DateTime?
   gender         String?
   phone          String
@@ -60,12 +63,8 @@ model Patient {
   address        String?
   bloodGroup     String?
   knownAllergies String?
-
-  // portal access - null if patient hasn't registered for portal yet
-  patientAuthId String? @unique // links to Supabase auth.users.id
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@map("patients")
 }
