@@ -72,3 +72,38 @@ export async function updatePatient(
         data,
     })
 }
+
+// Get vitals history for a patient - newest first
+export async function getPatientVitals(patientId: string) {
+    return prisma.vitals.findMany({
+        where: { patientId },
+        orderBy: { recordedAt: "desc" },
+        take: 10
+    })
+}
+
+// Record new vitals
+export async function recordVitals(data: {
+    patientId: string
+    recordedBy: string
+    bloodPressure?: string
+    weight?: number
+    temperature?: number
+    pulse?: number
+    notes?: string
+}) {
+    return prisma.vitals.create({
+        data
+    })
+}
+
+
+// Used by portal - finds patient using their auth session ID
+export async function getPatientByAuthId(authId: string) {
+    return prisma.patient.findUnique({
+        where: { id: authId }, // patient.id = profile.id = auth.id
+        include: {
+            profile: { select: { name: true, createdAt: true } },
+        },
+    })
+}

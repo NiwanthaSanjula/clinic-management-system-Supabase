@@ -2,10 +2,13 @@
 // Shows full patient details
 
 import { requireAssistant } from "@/lib/services/authService"
-import { getPatientById } from "@/lib/services/patientService"
+import { getPatientById, getPatientVitals } from "@/lib/services/patientService"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { User, Phone, Mail, MapPin, Droplet, AlertTriangle, Calendar, IdCard } from "lucide-react"
+import { recordVitalsAction } from "./vitals/action"
+import VitalsSection from "@/components/patients/VitalsSection"
+import InfoRow from "@/components/patients/InfoRow"
 
 type Props = {
     params: Promise<{ id: string }>
@@ -15,10 +18,18 @@ export default async function PatientProfilePage({ params }: Props) {
     await requireAssistant()
 
     const { id } = await params
-    const patient = await getPatientById(id)
+
+    // fetch patient and vitals in parellel
+    const [patient, vitals] = await Promise.all([
+        getPatientById(id),
+        getPatientVitals(id)
+    ])
 
     // If patient doesn't exist → 404
     if (!patient) notFound()
+
+    // Bind patient ID to the action
+    const boundAction = await recordVitalsAction.bind(null, id)
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
@@ -85,6 +96,13 @@ export default async function PatientProfilePage({ params }: Props) {
                 </div>
             </div>
 
+            {/* Vitals Section */}
+            <VitalsSection
+                patientId={id}
+                vitals={vitals}
+                action={boundAction}
+            />
+
             {/* Registered */}
             <p className="text-xs text-gray-400 text-right">
                 Registered: {new Date(patient.createdAt).toLocaleDateString()}
@@ -94,23 +112,3 @@ export default async function PatientProfilePage({ params }: Props) {
     )
 }
 
-// Small reusable row component — only used in this file
-function InfoRow({
-    icon,
-    label,
-    value,
-}: {
-    icon: React.ReactNode
-    label: string
-    value: string
-}) {
-    return (
-        <div className="flex items-start gap-2">
-            <span className="text-gray-400 mt-0.5">{icon}</span>
-            <div>
-                <p className="text-gray-500 text-xs">{label}</p>
-                <p className="font-medium">{value}</p>
-            </div>
-        </div>
-    )
-}

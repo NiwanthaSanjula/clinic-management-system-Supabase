@@ -13,3 +13,13 @@ export const createPatientSchema = z.object({
 })
 
 export type CreatePatientInput = z.infer<typeof createPatientSchema>
+
+export const vitalsSchema = z.object({
+    bloodPressure: z.string().optional(),
+    weight: z.string().optional(), // string from form → convert to float
+    temperature: z.string().optional(),
+    pulse: z.string().optional(),
+    notes: z.string().optional(),
+})
+
+export type VitalsInput = z.infer<typeof vitalsSchema>

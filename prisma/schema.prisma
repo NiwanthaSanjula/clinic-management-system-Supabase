@@ -65,6 +65,22 @@ model Patient {
   knownAllergies String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  vitals         Vitals[]
 
   @@map("patients")
+}
+
+model Vitals {
+  id            String   @id @default(cuid())
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id])
+  recordedBy    String // Assistant's profile id
+  bloodPressure String? // e.g. "120/80"
+  weight        Float? //kg
+  temperature   Float? // Celsius
+  pulse         Int? // bpm
+  notes         String?
+  recordedAt    DateTime @default(now())
+
+  @@map("vitals")
 }
