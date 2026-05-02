@@ -53,9 +53,9 @@ model AuditLog {
 // Patient - people who visit the clinic
 // They can also have a portal account (patientAuthId links to Supabase auth)
 model Patient {
-  id             String    @id @default(cuid())
-  profile        Profile   @relation(fields: [id], references: [id])
-  nic            String    @unique
+  id             String        @id @default(cuid())
+  profile        Profile       @relation(fields: [id], references: [id])
+  nic            String        @unique
   dateOfBirth    DateTime?
   gender         String?
   phone          String
@@ -63,9 +63,10 @@ model Patient {
   address        String?
   bloodGroup     String?
   knownAllergies String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   vitals         Vitals[]
+  appointments   Appointment[]
 
   @@map("patients")
 }
@@ -83,4 +84,54 @@ model Vitals {
   recordedAt    DateTime @default(now())
 
   @@map("vitals")
+}
+
+// Appointment status flow:
+// SCHEDULED -> WAITING -> IN_CONSULTATION -> COMPLETED
+//           -> CANCELLED (form any status)
+enum AppointmentStatus {
+  SCHEDULED
+  WAITING
+  IN_CONSULTATION
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentType {
+  BOOKED // has a time slot
+  WALKIN // no slot - added to queue directly
+}
+
+// Clinic working hours and slot configuration
+// Only ONE row ever exists - updated by doctor
+model ClinicSettings {
+  id           String @id @default(cuid())
+  openTime     String @default("09:00")
+  closeTime    String @default("17:00")
+  slotDuration Int    @default(20)
+  lunchStart   String @default("13:00")
+  lunchEnd     String @default("13:30")
+  clinicName   String @default("My Clinic")
+  consultFee   Float  @default(1000)
+
+  @@map("clinic_settings")
+}
+
+// One row per appointment
+model Appointment {
+  id        String            @id @default(cuid())
+  patientId String
+  patient   Patient           @relation(fields: [patientId], references: [id])
+  date      String // "2026-05-01" -stored as string for simplicity
+  timeSlot  String? // "09:00" - null for walk-ins
+  type      AppointmentType   @default(BOOKED)
+  status    AppointmentStatus @default(SCHEDULED)
+  notes     String? // booking notes 
+  createdBy String // profile id of who booked
+  createdAt DateTime          @default(now())
+  updateAt  DateTime          @updatedAt
+
+  // Prevent double bookings - same data + same slot = error
+  @@unique([date, timeSlot])
+  @@map("appointments")
 }
