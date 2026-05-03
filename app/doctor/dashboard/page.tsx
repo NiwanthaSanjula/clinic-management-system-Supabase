@@ -1,3 +1,5 @@
+// app/doctor/dashboard/page.tsx
+
 import { requireDoctor } from "@/lib/services/authService"
 
 export default async function DashboardPage() {

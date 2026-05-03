@@ -1,3 +1,5 @@
+// app/assistant/dashboard/page.tsx
+
 import { requireAssistant } from "@/lib/services/authService"
 
 export default async function AssistantDashboard() {
