@@ -1,3 +1,5 @@
+// lib/validation/auth.ts
+
 import z, { email } from "zod";
 
 export const loginSchema = z.object({

@@ -1,3 +1,5 @@
+// lib/supabase/client.ts
+
 // This client run in the browser (on the user's device)
 // It uses the ANON key - which is sage to be public
 // Use this inside client components
