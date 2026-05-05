@@ -72,8 +72,32 @@ export async function getAvailableSlots(date: string) {
     const allSlots = generateTimeSlots(settings)
     const bookedSlots = await getBookedSlots(date)
 
+    const today = new Date().toISOString().split("T")[0]
+    const isToday = date === today
+
+    // If viewing today, filter out slots that have already passed
+    // Add 20 min buffer - no point booking a slot that starts 5 minutes
+    const BUFFER_MINUTES = 20
+
+    const nowMinutes = isToday
+        ? new Date().getHours() * 60 + new Date().getMinutes() + BUFFER_MINUTES
+        : 0; // future dates keep all slots
+
     // Filter out already booked slots
-    return allSlots.filter(slot => !bookedSlots.includes(slot))
+    return allSlots.filter(slot => {
+        // Filter booked slots
+        if (bookedSlots.includes(slot)) return false
+
+        // Filter past slots only when viewing today
+        if (isToday) {
+            const [h, m] = slot.split(":").map(Number)
+            const slotMinutes = h * 60 + m
+            if (slotMinutes <= nowMinutes) return false
+        }
+
+        return true
+
+    })
 }
 
 // Get all appointments for a specific date (for queue board)

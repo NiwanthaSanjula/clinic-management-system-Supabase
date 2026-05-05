@@ -8,6 +8,7 @@ import { Clock, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useTransition } from "react"
 import { updateStatusAction } from "./action"
+import { createClient } from "@/lib/supabase/client"
 
 type Appointment = {
     id: string
@@ -18,46 +19,64 @@ type Appointment = {
     patient: { profile: { name: string }; nic: string }
 }
 
-type Pops = {
+type Props = {
     appointments: Appointment[]
     date: string
 }
 
 // status display config
 const STATUS_CONFIG = {
-    SCHEDULED: { label: "Scheduled", color: "bg-gray-100 text-gray-600 border-slate-100 border" },
-    WAITING: { label: "Waiting", color: "bg-yellow-100 text-yellow-600 border-yellow-100 border" },
-    IN_CONSULTATION: { label: "In Consultation", color: "bg-blue-100 text-blue-600 border-blue-100 border" },
-    COMPLETED: { label: "Completed", color: "bg-green-100 text-green-600 border-green-100 border" },
-    CANCELLED: { label: "Cancelled", color: "bg-red-100 text-red-600 border-red-100 border" },
+    SCHEDULED: { label: "Scheduled", color: "bg-gray-100 text-gray-600 border-slate-300 border" },
+    WAITING: { label: "Waiting", color: "bg-yellow-100 text-yellow-600 border-yellow-300 border" },
+    IN_CONSULTATION: { label: "In Consultation", color: "bg-green-100 text-green-600 border-green-400 animate-pulse border" },
+    COMPLETED: { label: "Completed", color: "bg-green-100 text-green-600 border-green-300 border" },
+    CANCELLED: { label: "Cancelled", color: "bg-red-100 text-red-600 border-red-300 border" },
 }
 
 // what status buttons to show current status
 const NEXT_ACTIONS: Record<string, { label: string, status: string, color: string }[]> = {
-    SCHEDULED: [{ label: "Mark Arrived", status: "WAITING", color: "bg-yellow-500" }, { label: "Cancel", status: "CANCELLED", color: "bg-red-500" }],
-    WAITING: [{ label: "Start Consult", status: "IN_CONSULTATION", color: "bg-blue-500" }, { label: "Cancel", status: "CANCELLED", color: "bg-red-500" }],
-    IN_CONSULTATION: [{ label: "Complete", status: "COMPLETED", color: "bg-green-500" }],
+    SCHEDULED: [{ label: "Mark as Arrived", status: "WAITING", color: "bg-yellow-500" }, { label: "Cancel", status: "CANCELLED", color: "bg-red-500" }],
+    WAITING: [{ label: "Start Consulta", status: "IN_CONSULTATION", color: "bg-blue-500" }, { label: "Cancel", status: "CANCELLED", color: "bg-red-500" }],
+    IN_CONSULTATION: [{ label: "Mark as Complete", status: "COMPLETED", color: "bg-green-500" }],
     COMPLETED: [],
     CANCELLED: []
 }
 
-export default function QueueBoard({ appointments, date }: Pops) {
+export default function QueueBoard({ appointments, date }: Props) {
 
     const router = useRouter();
     const [pending, startTransition] = useTransition();
 
     // Auto refresh every 10 seconds - keep queue in sync
     useEffect(() => {
-        const interval = setInterval(() => {
-            router.refresh();
-        }, 10000)
-        return () => clearInterval(interval)
+        const supabase = createClient()
+
+        const channel = supabase
+            .channel("appointments-realtime")
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "appointments",
+                },
+                () => {
+                    // Instantly triggers when the database changes
+                    router.refresh()
+                }
+            ).subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [router])
 
     function handleStatusUpdate(appointmentId: string, newStatus: string) {
         startTransition(async () => {
             await updateStatusAction(appointmentId, newStatus)
-            router.refresh()
+            // No need to router.refresh() here anymore! 
+            // Supabase will detect the database change and trigger the useEffect above automatically.
+
         })
     }
 

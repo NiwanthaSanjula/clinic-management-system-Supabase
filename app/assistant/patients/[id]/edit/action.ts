@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/prisma"
 import { requireAssistant } from "@/lib/services/authService"
 import { updatePatient } from "@/lib/services/patientService"
+import { ActionState, getErrorMessage } from "@/lib/utils/actionError"
 import { createPatientSchema } from "@/lib/validation/patient"
 import { redirect } from "next/navigation"
 
@@ -12,8 +13,8 @@ export async function updatePatientAction(
     id: string,
     prevState: { error: string } | null,
     formData: FormData
-) {
-    const assistant = await requireAssistant()
+): Promise<ActionState> {
+
 
     const raw = {
         name: formData.get("name"),
@@ -32,35 +33,44 @@ export async function updatePatientAction(
 
     const d = result.data
 
-    const old = await prisma.patient.findUnique({ where: { id } })
+    try {
+        const assistant = await requireAssistant()
 
-    await prisma.$transaction(async (tx) => {
-        await tx.profile.update({
-            where: { id },
-            data: { name: d.name }
+        const old = await prisma.patient.findUnique({ where: { id } })
+
+        await prisma.$transaction(async (tx) => {
+            await tx.profile.update({
+                where: { id },
+                data: { name: d.name }
+            })
+
+            await updatePatient(id, {
+                phone: d.phone,
+                email: d.email || null,
+                dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth) : null,
+                gender: d.gender || null,
+                address: d.address || null,
+                bloodGroup: d.bloodGroup || null,
+                knownAllergies: d.knownAllergies || null,
+            })
+
+            await tx.auditLog.create({
+                data: {
+                    userId: assistant.id,
+                    action: "UPDATE_PATIENT",
+                    entityType: "patient",
+                    entityId: id,
+                    oldValue: old as object,
+                    newValue: d as object,
+                }
+            })
         })
 
-        await updatePatient(id, {
-            phone: d.phone,
-            email: d.email || null,
-            dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth) : null,
-            gender: d.gender || null,
-            address: d.address || null,
-            bloodGroup: d.bloodGroup || null,
-            knownAllergies: d.knownAllergies || null,
-        })
+    } catch (error) {
+        return { error: getErrorMessage(error) }
+    }
 
-        await tx.auditLog.create({
-            data: {
-                userId: assistant.id,
-                action: "UPDATE_PATIENT",
-                entityType: "patient",
-                entityId: id,
-                oldValue: old as object,
-                newValue: d as object,
-            }
-        })
-    })
+
 
     redirect(`/assistant/patients/${id}`)
 }

@@ -3,6 +3,7 @@
 
 import { requireAssistant } from "@/lib/services/authService"
 import { recordVitals } from "@/lib/services/patientService"
+import { ActionState, getErrorMessage } from "@/lib/utils/actionError"
 import { vitalsSchema } from "@/lib/validation/patient"
 import { revalidatePath } from "next/cache"
 
@@ -10,9 +11,9 @@ export async function recordVitalsAction(
     patientId: string,
     prevState: { error: string } | null,
     formData: FormData
-) {
+): Promise<ActionState> {
 
-    const assistant = await requireAssistant()
+
 
     const raw = {
         bloodPressure: formData.get("bloodPressure"),
@@ -32,15 +33,23 @@ export async function recordVitalsAction(
         return { error: "Please enter at least one vital" }
     }
 
-    await recordVitals({
-        patientId,
-        recordedBy: assistant.id,
-        bloodPressure: d.bloodPressure || undefined,
-        weight: d.weight ? parseFloat(d.weight) : undefined,
-        temperature: d.temperature ? parseFloat(d.temperature) : undefined,
-        pulse: d.pulse ? parseInt(d.pulse) : undefined,
-        notes: d.notes || undefined,
-    })
+    try {
+        const assistant = await requireAssistant()
+
+        await recordVitals({
+            patientId,
+            recordedBy: assistant.id,
+            bloodPressure: d.bloodPressure || undefined,
+            weight: d.weight ? parseFloat(d.weight) : undefined,
+            temperature: d.temperature ? parseFloat(d.temperature) : undefined,
+            pulse: d.pulse ? parseInt(d.pulse) : undefined,
+            notes: d.notes || undefined,
+        })
+    } catch (error) {
+        return { error: getErrorMessage(error) }
+    }
+
+
 
     // Refresh the patient profile page
     revalidatePath(`/assistant/patients/${patientId}`)

@@ -2,6 +2,7 @@
 
 import { createAppointment } from "@/lib/services/appointmentService"
 import { requireAssistant } from "@/lib/services/authService"
+import { ActionState, getErrorMessage } from "@/lib/utils/actionError"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import z from "zod"
@@ -16,9 +17,7 @@ const bookingSchema = z.object({
 export async function bookingAppointmentAction(
     prevState: { error: string } | null,
     formData: FormData
-) {
-    const assistant = await requireAssistant()
-
+): Promise<ActionState> {
     const raw = {
         patientId: formData.get("patientId"),
         date: formData.get("date"),
@@ -38,6 +37,8 @@ export async function bookingAppointmentAction(
     if (d.date < today) return { error: "Cannot book appointment in the past" }
 
     try {
+        const assistant = await requireAssistant()
+
         await createAppointment({
             patientId: d.patientId,
             date: d.date,
@@ -46,8 +47,8 @@ export async function bookingAppointmentAction(
             notes: d.notes,
             createdBy: assistant.id
         })
-    } catch (e: any) {
-        return { error: e.message }
+    } catch (error) {
+        return { error: getErrorMessage(error) }
     }
 
     revalidatePath("/assistant/appointments")
