@@ -3,9 +3,10 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { bookingAppointmentAction } from "./action"
 import Link from "next/link";
-import { Calendar, CalendarClock, Clock, FileText, User } from "lucide-react";
+import { Calendar, CalendarClock, Clock, FileText, User, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import QuickCreatePatientModal from "@/components/patients/QuickCreatePatientModal";
 
 type Patient = { id: string; name: string; nic: string }
 type Props = { patients: Patient[]; availableSlots: string[] }
@@ -31,6 +32,9 @@ function BookingForm() {
     const [patients, setPatients] = useState<Patient[]>([])
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
     const [showDropdown, setShowDropdown] = useState(false)
+
+    // Control the quick create modal
+    const [showModal, setShowModal] = useState(false)
 
     // fetch available slots when date changes
     useEffect(() => {
@@ -59,11 +63,27 @@ function BookingForm() {
         startTransition(() => { action(formData) })
     }
 
+    // Called by modal when patient is created - auto selects them
+    function handlePatientCreated(patient: Patient) {
+        setSelectedPatient(patient)
+        setSearch("")
+        setPatients([])
+    }
+
     // Minimum date = today
     const today = new Date().toISOString().split("T")[0]
 
     return (
         <div className="max-w-xl mx-auto space-y-6">
+
+            {/* Quick create modal */}
+            <QuickCreatePatientModal
+                open={showModal}
+                onClose={() => setShowModal(false)}
+                onCreated={handlePatientCreated}
+            />
+
+
             <div className="flex flex-col gap-3">
                 <Link
                     href="/assistant/appointments"
@@ -93,9 +113,20 @@ function BookingForm() {
 
                 {/* --- Patient Search --- */}
                 <div className="bg-white border rounded-lg p-4 space-y-2 border-l-2 border-l-emerald-500">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                        <User size={15} className="text-emerald-500" /> Patient
-                    </label>
+                    <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                            <User size={15} className="text-emerald-500" /> Patient
+                        </label>
+                        {/* + New Patient button — opens modal */}
+                        <button
+                            type="button"
+                            onClick={() => setShowModal(true)}
+                            className="flex items-center gap-1 text-xs text-emerald-600 hover:underline"
+                        >
+                            <UserPlus size={13} />
+                            New Patient
+                        </button>
+                    </div>
 
                     {/* Hidden input carries the actual patientId */}
                     <input type="hidden" name="patientId" value={selectedPatient?.id ?? ""} />
@@ -123,6 +154,7 @@ function BookingForm() {
                                 onChange={e => { setSearch(e.target.value); setShowDropdown(true) }}
                                 placeholder="Search by name or NIC..."
                             />
+
                             {showDropdown && patients.length > 0 && (
                                 <div className="absolute top-full left-0 right-0 bg-white border rounded-lg shadow-lg z-10 mt-1">
                                     {patients.map(p => (
@@ -140,6 +172,22 @@ function BookingForm() {
                                             <span>{p.nic}</span>
                                         </button>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* No results hint */}
+                            {showDropdown && search.length >= 2 && patients.length === 0 && (
+                                <div className="absolute top-full left-0 right-0 bg-white border rounded-lg shadow-lg z-10 mt-1 p-3 text-sm text-gray-500 flex items-center justify-between">
+                                    <span>No patient found</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowModal(true)}
+                                        className="text-emerald-600 text-xs hover:underline flex items-center gap-1"
+                                    >
+                                        <UserPlus size={12} />
+                                        Create new
+                                    </button>
+
                                 </div>
                             )}
                         </div>

@@ -8,6 +8,7 @@ import { startTransition, useActionState, useTransition } from "react"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
 import VitalBadge from "./VitalBadge"
+import VitalsHistory from "./VitalsHistory"
 
 type Vitals = {
     id: string
@@ -96,49 +97,9 @@ export default function VitalsSection({ patientId, vitals, action }: Props) {
             </div>
 
             {/* Vital history */}
-            <div className="bg-white rounded-lg border p-6">
-                <h2 className="font-bold text-gray-700 mb-4">Vitals History</h2>
-
-                {vitals.length === 0 ? (
-                    <p className="text-gray-400 text-sm text-center py-6">
-                        No vitals recorded yet
-                    </p>
-                ) : (
-                    <div className="space-y-3">
-                        {vitals.map((v) => (
-                            <div key={v.id} className="border rounded-lg p-4 text-sm">
-                                {/* Date */}
-                                <p className="text-xs text-gray-400 mb-2">
-                                    {new Date(v.recordedAt).toLocaleString()}
-                                </p>
-
-                                {/* Vitals grid */}
-                                <div className="grid grid-cols-4 gap-3">
-                                    {v.bloodPressure && (
-                                        <VitalBadge icon={<Heart size={12} />} label="BP" value={v.bloodPressure} color="red" />
-                                    )}
-                                    {v.weight && (
-                                        <VitalBadge icon={<Weight size={12} />} label="Weight" value={`${v.weight}kg`} color="blue" />
-                                    )}
-                                    {v.temperature && (
-                                        <VitalBadge icon={<Thermometer size={12} />} label="Temp" value={`${v.temperature}°C`} color="orange" />
-                                    )}
-                                    {v.pulse && (
-                                        <VitalBadge icon={<ActivityIcon size={12} />} label="Pulse" value={`${v.pulse}bpm`} color="purple" />
-                                    )}
-                                </div>
-
-                                {v.notes && (
-                                    <p className="text-gray-500 text-xs mt-2 italic">{v.notes}</p>
-                                )}
-
-                            </div>
-                        ))}
-
-                    </div>
-                )}
-
-            </div>
+            <VitalsHistory
+                vitals={vitals}
+            />
 
 
         </div>

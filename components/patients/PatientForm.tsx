@@ -13,6 +13,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel, FieldSet } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { ActionState } from "@/lib/utils/actionError"
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
@@ -22,7 +23,7 @@ type Props = {
     // Pre-filled values for edit mode — empty for create
     defaultValues?: Partial<CreatePatientInput>
     // The server action to call on submit
-    action: (prevState: { error: string } | null, formData: FormData) => Promise<{ error: string } | null>
+    action: (prevState: ActionState, formData: FormData) => Promise<ActionState>
 }
 
 export default function PatientForm({ mode, backHref, defaultValues = {}, action }: Props) {

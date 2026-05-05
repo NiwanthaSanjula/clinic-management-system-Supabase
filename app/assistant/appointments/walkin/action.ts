@@ -3,6 +3,7 @@
 
 import { addWalkIn } from "@/lib/services/appointmentService"
 import { requireAssistant } from "@/lib/services/authService"
+import { ActionState, getErrorMessage } from "@/lib/utils/actionError"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import z from "zod"
@@ -15,8 +16,7 @@ const walkInSchema = z.object({
 export async function addWalkInAction(
     prevState: { error: string } | null,
     formData: FormData
-) {
-    const assistant = await requireAssistant()
+): Promise<ActionState> {
 
     const result = walkInSchema.safeParse({
         patientId: formData.get("patientId"),
@@ -25,11 +25,19 @@ export async function addWalkInAction(
 
     if (!result.success) return { error: result.error.issues[0].message }
 
-    await addWalkIn({
-        patientId: result.data.patientId,
-        notes: result.data.notes,
-        createdBy: assistant.id,
-    })
+    try {
+
+        const assistant = await requireAssistant()
+
+        await addWalkIn({
+            patientId: result.data.patientId,
+            notes: result.data.notes,
+            createdBy: assistant.id,
+        })
+
+    } catch (error) {
+        return { error: getErrorMessage(error) }
+    }
 
     revalidatePath("/assistant/appointments")
     redirect("/assistant/appointments")

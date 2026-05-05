@@ -2,13 +2,14 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server";
+import { ActionState, getErrorMessage } from "@/lib/utils/actionError";
 import { loginSchema } from "@/lib/validation/auth";
 import { redirect } from "next/navigation";
 
 export async function loginAction(
     prevState: { error: string } | null,
     formData: FormData
-) {
+): Promise<ActionState> {
     // pull raw values from form
     const raw = {
         email: formData.get("email"),
@@ -21,14 +22,18 @@ export async function loginAction(
         return { error: result.error.issues[0].message }
     }
 
-    const supabase = await createClient()
-    const { error } = await supabase.auth.signInWithPassword({
-        email: result.data.email,
-        password: result.data.password
-    })
+    try {
+        const supabase = await createClient()
+        const { error } = await supabase.auth.signInWithPassword({
+            email: result.data.email,
+            password: result.data.password
+        })
 
-    if (error) {
-        return { error: "Invalid email or password" }
+        if (error) {
+            return { error: "Invalid email or password" }
+        }
+    } catch (error) {
+        return { error: getErrorMessage(error) }
     }
 
     // Success — redirect to home (middleware handles role-based routing)

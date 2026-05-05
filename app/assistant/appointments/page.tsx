@@ -4,6 +4,7 @@ import { requireAssistant } from "@/lib/services/authService"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import QueueBoard from "./QueueBoard"
+import DateNavigator from "./DateNavigator"
 
 
 type Props = {
@@ -21,7 +22,7 @@ export default async function AppointmentsPage({ searchParams }: Props) {
     const appointments = await getAppointmentsByDate(viewing)
 
     return (
-        <div className="space-y-4 max-w-6xl mx-auto">
+        <div className="space-y-4 max-w-7xl mx-auto">
             { /** --- header --- */}
             <div className="flex items-center justify-between">
                 <div>
@@ -29,7 +30,7 @@ export default async function AppointmentsPage({ searchParams }: Props) {
                         Appointments
                     </h1>
                     <p className="text-gray-500">
-                        {viewing === today ? "Today" : viewing}
+                        Viewing : <span className="font-semibold text-blue-500">{viewing === today ? "Today" : viewing}</span>
                     </p>
                 </div>
 
@@ -59,12 +60,7 @@ export default async function AppointmentsPage({ searchParams }: Props) {
                     <ChevronLeft size={20} />
                 </Link>
 
-                <input
-                    type="date"
-                    defaultValue={viewing}
-                    onChange={e => window.location.href = `?date=${e.target.value}`}
-                    className="border rounded px-3 py-1 text-sm"
-                />
+                <DateNavigator viewing={viewing} today={today} />
 
                 <Link
                     href={`?date=${getNextDate(viewing)}`}
@@ -77,7 +73,7 @@ export default async function AppointmentsPage({ searchParams }: Props) {
                     <Link
                         href="?" className="text-blue-600 text-sm hover:underline"
                     >
-                        Today
+                        Go to Today
                     </Link>
                 )}
             </div>
