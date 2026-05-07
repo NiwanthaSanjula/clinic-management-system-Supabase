@@ -30,7 +30,9 @@ model Profile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  patient Patient? // only exists if role is PATIENT
+  patient       Patient? // only exists if role is PATIENT
+  consultations Consultation[]
+  prescriptions Prescription[] @relation("DoctorPrescriptions")
 
   @@map("profiles") // actual table name in supabase db
 }
@@ -53,9 +55,9 @@ model AuditLog {
 // Patient - people who visit the clinic
 // They can also have a portal account (patientAuthId links to Supabase auth)
 model Patient {
-  id             String        @id @default(cuid())
-  profile        Profile       @relation(fields: [id], references: [id])
-  nic            String        @unique
+  id             String         @id @default(cuid())
+  profile        Profile        @relation(fields: [id], references: [id])
+  nic            String         @unique
   dateOfBirth    DateTime?
   gender         String?
   phone          String
@@ -63,10 +65,12 @@ model Patient {
   address        String?
   bloodGroup     String?
   knownAllergies String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   vitals         Vitals[]
   appointments   Appointment[]
+  consultations  Consultation[]
+  prescriptions  Prescription[]
 
   @@map("patients")
 }
@@ -119,19 +123,112 @@ model ClinicSettings {
 
 // One row per appointment
 model Appointment {
-  id        String            @id @default(cuid())
-  patientId String
-  patient   Patient           @relation(fields: [patientId], references: [id])
-  date      String // "2026-05-01" -stored as string for simplicity
-  timeSlot  String? // "09:00" - null for walk-ins
-  type      AppointmentType   @default(BOOKED)
-  status    AppointmentStatus @default(SCHEDULED)
-  notes     String? // booking notes 
-  createdBy String // profile id of who booked
-  createdAt DateTime          @default(now())
-  updateAt  DateTime          @updatedAt
+  id           String            @id @default(cuid())
+  patientId    String
+  patient      Patient           @relation(fields: [patientId], references: [id])
+  date         String // "2026-05-01" -stored as string for simplicity
+  timeSlot     String? // "09:00" - null for walk-ins
+  type         AppointmentType   @default(BOOKED)
+  status       AppointmentStatus @default(SCHEDULED)
+  notes        String? // booking notes 
+  createdBy    String // profile id of who booked
+  createdAt    DateTime          @default(now())
+  updateAt     DateTime          @updatedAt
+  consultation Consultation?
 
   // Prevent double bookings - same data + same slot = error
   @@unique([date, timeSlot])
   @@map("appointments")
+}
+
+// Medicine master list
+// Seeded once - doctor/assistant pick one from this list when prescribing
+model Medicine {
+  id            String  @id @default(cuid())
+  name          String // brand name "e.g. Panadol, Mylanta"
+  genericName   String // e.g. Paracetamol
+  category      String // e.g. Painkiller, Antibiotic
+  unit          String // tablet, capsule, ml, mg
+  defaultDosage String? // e.g. 1 tab 3 times a day
+  isActive      Boolean @default(true) // soft delete 
+
+  prescriptionItems PrescriptionItem[]
+
+  @@unique([name, genericName])
+  @@map("medicines")
+}
+
+// One consultation per appointment - created by doctor
+// Contains all clinical findings for the visit
+model Consultation {
+  id            String @id @default(cuid())
+  appointmentId String @unique // one-to-one with appointment
+  patientId     String
+  doctorId      String // profile id of doctor
+
+  // What the patient came in with
+  chiefComplaint String
+  symptoms       String?
+
+  // What the doctor found + concluded
+  clinicalNotes String?
+  diagnosis     String
+
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  // Relations
+  appointment  Appointment   @relation(fields: [appointmentId], references: [id])
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  doctor       Profile       @relation(fields: [doctorId], references: [id])
+  prescription Prescription? // may or may not have a prescription
+
+  @@map("consultations")
+}
+
+// Prescription header - one per consultation
+// Links to the individual medicine items
+model Prescription {
+  id             String @id @default(cuid())
+  consultationId String @unique // one-to-one with consultation
+  patientId      String
+  doctorId       String
+
+  status PrescriptionStatus @default(PENDING)
+  notes  String? // general prescription notes
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  consultation Consultation       @relation(fields: [consultationId], references: [id])
+  patient      Patient            @relation(fields: [patientId], references: [id])
+  doctor       Profile            @relation("DoctorPrescriptions", fields: [doctorId], references: [id])
+  items        PrescriptionItem[]
+
+  @@map("prescriptions")
+}
+
+// One row per medicine in a prescription
+model PrescriptionItem {
+  id             String @id @default(cuid())
+  prescriptionId String
+  medicineId     String
+
+  dosage       String // e.g. "500mg"
+  frequency    String // e.g. "3 times daily"
+  duration     String // e.g. "5 days"
+  quantity     Int // total units to dispense
+  instructions String? // e.g."Tale after meals"
+
+  // Relations
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  medicine     Medicine     @relation(fields: [medicineId], references: [id])
+
+  @@map("prescription_items")
+}
+
+enum PrescriptionStatus {
+  PENDING // written, not yet dispensed
+  DISPENSED // dispensed to patient
+  PARTIAL // some items given
 }

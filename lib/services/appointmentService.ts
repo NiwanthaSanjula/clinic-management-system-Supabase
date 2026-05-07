@@ -192,3 +192,34 @@ export async function addWalkIn(data: {
         }
     })
 }
+
+// Get today's appointments for doctor - only WAITING and IN_CONSULTATION
+// Doctor only sees patients ready for or in consultation
+export async function getDoctorQueue(date: string) {
+    return prisma.appointment.findMany({
+        where: {
+            date,
+            status: { in: ["WAITING", "IN_CONSULTATION"] }
+        },
+        include: {
+            patient: {
+                include: {
+                    profile: { select: { name: true } },
+                    // Latest vitals recoreded by assistant
+                    vitals: {
+                        orderBy: { recordedAt: "desc" },
+                        take: 1 // only most recent
+                    }
+                }
+            },
+            // Check if consultation ready started for this appointment
+            consultation: {
+                select: { id: true }
+            }
+        },
+        orderBy: [
+            { timeSlot: "asc" },
+            { createdAt: "asc" }
+        ]
+    })
+}
