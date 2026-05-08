@@ -1,17 +1,20 @@
 // app/(portal)/portal/dashboard/page.tsx
 import LogoutButton from "@/components/layout/logout-button"
+import VisitTimeline from "@/components/patients/VisitTimeline"
 import { requirePatient } from "@/lib/services/authService"
+import { getPatientPrescriptions, getPatientVisitHistory } from "@/lib/services/consultationService"
 import { getPatientByAuthId, getPatientVitals } from "@/lib/services/patientService"
-import { profile } from "console"
 import { ActivityIcon, AlertTriangle, CreditCard, FileText, User } from "lucide-react"
 import Link from "next/link"
 
 export default async function PortalDashboard() {
     const profile = await requirePatient()
 
-    const [patient, vitals] = await Promise.all([
+    const [patient, vitals, visitHistory] = await Promise.all([
         getPatientByAuthId(profile.id),
-        getPatientVitals(profile.id)
+        getPatientVitals(profile.id),
+        getPatientVisitHistory(profile.id),
+        getPatientPrescriptions(profile.id)
     ])
 
     if (!patient) return null;
@@ -82,6 +85,9 @@ export default async function PortalDashboard() {
                     </div>
                 </div>
             )}
+
+            <VisitTimeline visits={visitHistory} role="PATIENT" />
+
             {/* Quick links — sections we build in later sprints */}
             <div className="grid grid-cols-2 gap-4">
                 <Link href="/portal/vitals"
@@ -103,13 +109,13 @@ export default async function PortalDashboard() {
                 </Link>
 
                 {/* These get built in later sprints */}
-                <div className="bg-white border rounded-lg p-4 opacity-40 flex items-center gap-3">
+                <Link href="/portal/prescriptions"
+                    className="bg-white border rounded-lg p-4 hover:bg-gray-50 flex items-center gap-3">
                     <FileText size={20} className="text-blue-500" />
                     <div>
                         <p className="font-medium text-sm">Prescriptions</p>
-                        <p className="text-xs text-gray-400">Coming soon</p>
                     </div>
-                </div>
+                </Link>
 
                 <div className="bg-white border rounded-lg p-4 opacity-40 flex items-center gap-3">
                     <CreditCard size={20} className="text-amber-500" />

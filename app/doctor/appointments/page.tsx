@@ -91,7 +91,7 @@ export default async function DoctorAppointmentsPage() {
 
                                         {/** Action button */}
                                         <Link
-                                            href={`/doctor/consultation/${appt.id}`}
+                                            href={`/doctor/consultations/${appt.id}`}
                                             className={`text-sm px-4 py-2 rounded-md text-white transition-colors ${hasConsultation
                                                 ? "bg-blue-600 hover:bg-blue-700"
                                                 : "bg-emerald-600 hover:bg-emerald-700"
