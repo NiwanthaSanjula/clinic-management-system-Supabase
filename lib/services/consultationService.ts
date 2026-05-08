@@ -122,7 +122,9 @@ export async function getPatientVisitHistory(patientId: string) {
                         include: {
                             items: {
                                 include: {
-                                    medicine: true
+                                    medicine: {
+                                        select: { name: true, genericName: true, unit: true }
+                                    }
                                 }
                             }
                         }
@@ -132,5 +134,32 @@ export async function getPatientVisitHistory(patientId: string) {
             // Vital recorded during this appointment
         },
         orderBy: { date: "desc" }
+    })
+}
+
+// Get all prescription for a patient - for portal view
+// Newset first, include medicine details
+export async function getPatientPrescriptions(patientId: string) {
+    return prisma.prescription.findMany({
+        where: { patientId },
+        include: {
+            items: {
+                include: {
+                    medicine: {
+                        select: { name: true, genericName: true, unit: true }
+                    }
+                }
+            },
+            // Which visit this prescription belongs to
+            consultation: {
+                select: {
+                    diagnosis: true,
+                    appointment: {
+                        select: { date: true }
+                    }
+                }
+            }
+        },
+        orderBy: { createdAt: "desc" }
     })
 }

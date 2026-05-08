@@ -1,6 +1,8 @@
 import PatientProfileCard from "@/components/patients/PatientProfileCard"
+import VisitTimeline from "@/components/patients/VisitTimeline"
 import VitalsHistory from "@/components/patients/VitalsHistory"
 import { requireDoctor } from "@/lib/services/authService"
+import { getPatientVisitHistory } from "@/lib/services/consultationService"
 import { getPatientById, getPatientVitals } from "@/lib/services/patientService"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -14,9 +16,10 @@ export default async function DoctorPatientProfilePage({ params }: Props) {
     await requireDoctor()
 
     const { id } = await params
-    const [patient, vitals] = await Promise.all([
+    const [patient, vitals, visitHistory] = await Promise.all([
         getPatientById(id),
-        getPatientVitals(id)
+        getPatientVitals(id),
+        getPatientVisitHistory(id)
     ])
 
     if (!patient) notFound()
@@ -34,6 +37,8 @@ export default async function DoctorPatientProfilePage({ params }: Props) {
 
             {/* Doctor gets read-only vitals history */}
             <VitalsHistory vitals={vitals} accentColor="purple" />
+
+            <VisitTimeline visits={visitHistory} role="DOCTOR" />
 
             <p className="text-xs text-gray-400 text-right">
                 Registered: {new Date(patient.createdAt).toLocaleDateString()}

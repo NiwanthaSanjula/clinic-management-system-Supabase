@@ -10,6 +10,8 @@ import { recordVitalsAction } from "./vitals/action"
 import VitalsSection from "@/components/patients/VitalsSection"
 import InfoRow from "@/components/patients/InfoRow"
 import PatientProfileCard from "@/components/patients/PatientProfileCard"
+import { getPatientVisitHistory } from "@/lib/services/consultationService"
+import VisitTimeline from "@/components/patients/VisitTimeline"
 
 type Props = {
     params: Promise<{ id: string }>
@@ -21,9 +23,10 @@ export default async function PatientProfilePage({ params }: Props) {
     const { id } = await params
 
     // fetch patient and vitals in parellel
-    const [patient, vitals] = await Promise.all([
+    const [patient, vitals, visitHistory] = await Promise.all([
         getPatientById(id),
-        getPatientVitals(id)
+        getPatientVitals(id),
+        getPatientVisitHistory(id)
     ])
 
     // If patient doesn't exist → 404
@@ -57,6 +60,11 @@ export default async function PatientProfilePage({ params }: Props) {
                 patientId={id}
                 vitals={vitals}
                 action={boundAction}
+            />
+
+            <VisitTimeline
+                visits={visitHistory}
+                role="ASSISTANT"
             />
 
             {/* Registered */}

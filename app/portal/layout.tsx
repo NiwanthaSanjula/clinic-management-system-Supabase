@@ -8,7 +8,7 @@ export default function PortalLayout({
     children: React.ReactNode
 }) {
     return (
-        <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+        <div className="min-h-screen bg-blue-50">
             {children}
         </div>
     )
