@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import QueueBoard from "./QueueBoard"
 import DateNavigator from "./DateNavigator"
+import AppointmentActions from "./AppointmentActions"
 
 
 type Props = {
@@ -34,21 +35,7 @@ export default async function AppointmentsPage({ searchParams }: Props) {
                     </p>
                 </div>
 
-                <div>
-                    <Link
-                        href={"/assistant/appointments/walkin"}
-                        className="border px-4 py-2 rounded-md text-sm hover:bg-gray-50"
-                    >
-                        + Walk-In
-                    </Link>
-
-                    <Link
-                        href="/assistant/appointments/new"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700"
-                    >
-                        + Book
-                    </Link>
-                </div>
+                <AppointmentActions />
             </div>
 
             {/* --- Date navigation --- */}

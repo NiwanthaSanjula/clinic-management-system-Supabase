@@ -1,6 +1,7 @@
 // lib/services/appointmentService.ts
 
 import { prisma } from "../prisma";
+import { generateInvoice } from "./billingService";
 
 // Get clinic setting - cached since it rarely changes
 export async function getClinicSettings() {
@@ -165,10 +166,35 @@ export async function updateAppointmentStatus(
         throw new Error(`Canot transition from ${appointment.status} to ${newStatus}`)
     }
 
-    return prisma.appointment.update({
+    const updated = await prisma.appointment.update({
         where: { id },
         data: { status: newStatus }
     })
+
+    // Auto generate invoice when appointment is completed
+    // Only if a consultation exists (doctor must have seen the patient)
+    if (newStatus === "COMPLETED") {
+        const consultation = await prisma.consultation.findUnique({
+            where: { appointmentId: id }
+        })
+        if (consultation) {
+            // generateInvoice handle the case where invoice already exists
+            await generateInvoice(id)
+        }
+    }
+
+    await prisma.auditLog.create({
+        data: {
+            userId: "system",
+            action: "UPDATE_APPOINTMENT_STATUS",
+            entityType: "appointment",
+            entityId: id,
+            oldValue: { status: appointment.status },
+            newValue: { status: newStatus }
+        }
+    })
+
+    return updated
 }
 
 

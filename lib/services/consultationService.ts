@@ -46,7 +46,7 @@ export async function saveConsultation(data: {
     diagnosis: string
 }) {
     // upsert - create if first save, update if doctor edit
-    return prisma.consultation.upsert({
+    const result = await prisma.consultation.upsert({
         where: { appointmentId: data.appointmentId },
         create: data,
         update: {
@@ -56,6 +56,23 @@ export async function saveConsultation(data: {
             diagnosis: data.diagnosis
         }
     })
+
+    // Audit every consultation save
+    await prisma.auditLog.create({
+        data: {
+            userId: data.doctorId,
+            action: "SAVE_CONSULTATION",
+            entityType: "consultation",
+            entityId: result.id,
+            newValue: {
+                diagnosis: data.diagnosis,
+                chiefComplaint: data.chiefComplaint,
+            }
+        }
+    })
+
+    return result
+
 }
 
 

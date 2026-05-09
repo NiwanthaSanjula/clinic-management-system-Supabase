@@ -6,15 +6,17 @@ import { getPatientPrescriptions, getPatientVisitHistory } from "@/lib/services/
 import { getPatientByAuthId, getPatientVitals } from "@/lib/services/patientService"
 import { ActivityIcon, AlertTriangle, CreditCard, FileText, User } from "lucide-react"
 import Link from "next/link"
+import { getPatientInvoices } from "@/lib/services/billingService"
 
 export default async function PortalDashboard() {
     const profile = await requirePatient()
 
-    const [patient, vitals, visitHistory] = await Promise.all([
+    const [patient, vitals, visitHistory, prescriptions, invoices] = await Promise.all([
         getPatientByAuthId(profile.id),
         getPatientVitals(profile.id),
         getPatientVisitHistory(profile.id),
-        getPatientPrescriptions(profile.id)
+        getPatientPrescriptions(profile.id),
+        getPatientInvoices(profile.id),
     ])
 
     if (!patient) return null;
@@ -117,13 +119,16 @@ export default async function PortalDashboard() {
                     </div>
                 </Link>
 
-                <div className="bg-white border rounded-lg p-4 opacity-40 flex items-center gap-3">
+                <Link href="/portal/payments"
+                    className="bg-white border rounded-lg p-4 hover:bg-gray-50 flex items-center gap-3">
                     <CreditCard size={20} className="text-amber-500" />
                     <div>
                         <p className="font-medium text-sm">Payments</p>
-                        <p className="text-xs text-gray-400">Coming soon</p>
+                        <p className="text-xs text-gray-400">
+                            {invoices.filter(i => i.status === "UNPAID").length} unpaid
+                        </p>
                     </div>
-                </div>
+                </Link>
             </div>
 
 

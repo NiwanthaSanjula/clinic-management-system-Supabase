@@ -20,6 +20,17 @@ enum Role {
   PATIENT
 }
 
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  WAIVED // doctor waived the fee
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+}
+
 // Profile table - extends Supabase's built-in auth.users table
 // When a stafff member signs up, we create a Profile row
 // The id here MATCHES the id in Supabase Auth exactly
@@ -71,6 +82,7 @@ model Patient {
   appointments   Appointment[]
   consultations  Consultation[]
   prescriptions  Prescription[]
+  invoices       Invoice[]
 
   @@map("patients")
 }
@@ -135,6 +147,7 @@ model Appointment {
   createdAt    DateTime          @default(now())
   updateAt     DateTime          @updatedAt
   consultation Consultation?
+  invoice      Invoice?
 
   // Prevent double bookings - same data + same slot = error
   @@unique([date, timeSlot])
@@ -150,6 +163,7 @@ model Medicine {
   category      String // e.g. Painkiller, Antibiotic
   unit          String // tablet, capsule, ml, mg
   defaultDosage String? // e.g. 1 tab 3 times a day
+  price         Float   @default(0)
   isActive      Boolean @default(true) // soft delete 
 
   prescriptionItems PrescriptionItem[]
@@ -231,4 +245,41 @@ enum PrescriptionStatus {
   PENDING // written, not yet dispensed
   DISPENSED // dispensed to patient
   PARTIAL // some items given
+}
+
+// One invoice per appointment - auto created when appointment COMPLETED
+model Invoice {
+  id              String         @id @default(cuid())
+  patientId       String
+  appointmentId   String         @unique
+  consultationFee Float // copies from ClinicSettings at time of invoice
+  medicineTotal   Float          @default(0)
+  totalAmount     Float // consultationFee + medicineTotal
+  status          InvoiceStatus  @default(UNPAID)
+  paymentMethod   PaymentMethod?
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime       @default(now())
+
+  // Relations
+  patient     Patient       @relation(fields: [patientId], references: [id])
+  appointment Appointment   @relation(fields: [appointmentId], references: [id])
+  items       InvoiceItem[]
+
+  @@map("invoices")
+}
+
+// One row per line item on the invoice
+// e.g."Consultation Fee", "Pendol x10"
+model InvoiceItem {
+  id          String @id @default(cuid())
+  invoiceId   String
+  description String // e.g."Penadol (Paracetmol) x10 tablets"
+  quantity    Int    @default(1)
+  unitPrice   Float // quantity x unit price
+  total       Float // quantity * unitPrice
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_items")
 }
