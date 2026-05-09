@@ -9,6 +9,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import ConsultationForm from "./ConsultationForm"
 import { ArrowLeft, Calendar, Clock } from "lucide-react"
+import { updateAppointmentStatus } from "@/lib/services/appointmentService"
 
 type Props = {
     params: Promise<{ appointmentId: string }>
@@ -25,6 +26,11 @@ export default async function ConsultationPage({ params }: Props) {
     })
 
     if (!appointment) notFound()
+    // Auto-move to IN_CONSULTATION when doctor opens the page
+    // This means "doctor has started seeing this patient"
+    if (appointment.status === "WAITING") {
+        await updateAppointmentStatus(appointmentId, "IN_CONSULTATION")
+    }
 
     const [patient, consultation, medicines] = await Promise.all([
         getPatientById(appointment.patientId),
@@ -50,6 +56,9 @@ export default async function ConsultationPage({ params }: Props) {
             instructions: item.instructions ?? "",
         }))
     } : null
+
+    // Hide complete button if already completed
+    const canComplete = appointment.status !== "COMPLETED"
 
     return (
         <div className="min-h-screen bg-slate-50/60">
@@ -101,7 +110,9 @@ export default async function ConsultationPage({ params }: Props) {
                     patientId={appointment.patientId}
                     medicines={medicines}
                     existing={existing}
+                    canComplete={canComplete}
                 />
+
 
             </div>
         </div>
