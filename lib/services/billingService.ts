@@ -3,6 +3,7 @@
 // Invoice is auto-created when appointment → COMPLETED
 
 import { prisma } from "../prisma";
+import { deductStock } from "./inventoryService";
 
 // Auto-generate invoice when appointment is completed
 // Called from appointmentService.updateAppointmentStatus
@@ -86,7 +87,7 @@ export async function generateInvoice(appointmentId: string) {
     const totalAmount = consultationFee + medicineTotal
 
     // Create invoice + items in one transaction
-    return prisma.$transaction(async (tx) => {
+    const invoice = await prisma.$transaction(async (tx) => {
         const invoice = await tx.invoice.create({
             data: {
                 patientId: appointment.patientId,
@@ -119,9 +120,28 @@ export async function generateInvoice(appointmentId: string) {
                 }
             }
         })
-
         return invoice
     })
+
+    // Deduct stock for each prescribed medicine using FEFO
+    for (const item of prescriptionItems) {
+        const result = await deductStock({
+            medicineId: item.medicineId,
+            quantityNeeded: item.quantity,
+            reason: "prescription_dispensed",
+            referenceId: invoice.id,
+            createdBy: "system"
+        })
+
+        if (!result.success) {
+            console.warn(
+                `Low stock: ${item.medicine.name} - ` +
+                `need ${item.quantity}, short by ${result.shortfall}`
+            )
+        }
+    }
+
+    return invoice
 }
 
 // Get all unpaid invoices for a patient
