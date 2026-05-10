@@ -31,6 +31,12 @@ enum PaymentMethod {
   CARD
 }
 
+enum StockMovementType {
+  IN // stock received
+  OUT // stock dispensed
+  ADJUSTMENT // manual correction
+}
+
 // Profile table - extends Supabase's built-in auth.users table
 // When a stafff member signs up, we create a Profile row
 // The id here MATCHES the id in Supabase Auth exactly
@@ -167,6 +173,8 @@ model Medicine {
   isActive      Boolean @default(true) // soft delete 
 
   prescriptionItems PrescriptionItem[]
+  batches           InventoryBatch[]
+  stockMovements    StockMovement[]
 
   @@unique([name, genericName])
   @@map("medicines")
@@ -282,4 +290,42 @@ model InvoiceItem {
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 
   @@map("invoice_items")
+}
+
+// One batch ber medicine delivery
+// FEFO = we always deduct from soonest-expiring batch first
+
+model InventoryBatch {
+  id           String   @id @default(cuid())
+  medicineId   String
+  batchNumber  String
+  quantity     Int // remaining quantity in this batch
+  unitCost     Float // buying price per unit
+  expiryDate   DateTime
+  receivedDate DateTime @default(now())
+  notes        String?
+
+  medicine  Medicine        @relation(fields: [medicineId], references: [id])
+  movements StockMovement[]
+
+  @@map("inventory_batches")
+}
+
+// Every stock change is recorded here — full audit trail
+// Tells exactly why stock changed and when
+model StockMovement {
+  id          String            @id @default(cuid())
+  medicineId  String
+  batchId     String
+  type        StockMovementType
+  quantity    Int // always positive — type tells direction
+  reason      String // e.g. "prescription_dispensed", "stock_received"
+  referenceId String? // invoiceId or batchId depending on reason
+  createdBy   String // profileId of who did this
+  createdAt   DateTime          @default(now())
+
+  medicine Medicine       @relation(fields: [medicineId], references: [id])
+  batch    InventoryBatch @relation(fields: [batchId], references: [id])
+
+  @@map("stock_movements")
 }
