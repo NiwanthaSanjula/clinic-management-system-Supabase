@@ -45,7 +45,7 @@ export default function InventoryView({ stockLevels, role, basePath }: Props) {
     ).length
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto">
+        <div className="space-y-4 max-w-sm md:max-w-7xl">
 
             {/* Add medicine modal — assistant only */}
             {isAssistant && (
@@ -56,7 +56,7 @@ export default function InventoryView({ stockLevels, role, basePath }: Props) {
             )}
 
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
                 <div className="flex items-center gap-3">
                     <Package size={40} className="text-emerald-500" />
                     <div>
@@ -91,7 +91,7 @@ export default function InventoryView({ stockLevels, role, basePath }: Props) {
             </div>
 
             {/* ── Stat Cards ── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <StatCard
                     label="Out of Stock"
                     value={outOfStock}
@@ -144,7 +144,7 @@ export default function InventoryView({ stockLevels, role, basePath }: Props) {
             )*/}
 
             {/* Stock table */}
-            <div className="bg-white rounded-lg border overflow-hidden shadow-sm">
+            <div className="bg-white rounded-lg border overflow-x-scroll shadow-sm">
                 <table className="w-full text-sm">
                     <thead className="bg-blue-500">
                         <tr>

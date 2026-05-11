@@ -56,6 +56,7 @@ export async function saveConsultationAction(
         clinicalNotes: formData.get("clinicalNotes"),
         diagnosis: formData.get("diagnosis"),
         prescriptionNotes: formData.get("prescriptionNotes"),
+        intent: formData.get("intent"),
     })
 
     if (!result.success) {

@@ -1,7 +1,7 @@
 
 import { getAppointmentsByDate } from "@/lib/services/appointmentService"
 import { requireAssistant } from "@/lib/services/authService"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ClipboardClock } from "lucide-react"
 import Link from "next/link"
 import QueueBoard from "./QueueBoard"
 import DateNavigator from "./DateNavigator"
@@ -23,16 +23,17 @@ export default async function AppointmentsPage({ searchParams }: Props) {
     const appointments = await getAppointmentsByDate(viewing)
 
     return (
-        <div className="space-y-4 max-w-7xl mx-auto">
+        <div className="space-y-4">
             { /** --- header --- */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">
-                        Appointments
-                    </h1>
-                    <p className="text-gray-500">
-                        Viewing : <span className="font-semibold text-blue-500">{viewing === today ? "Today" : viewing}</span>
-                    </p>
+                <div className="flex items-center gap-3">
+                    <ClipboardClock size={40} className="text-emerald-500" />
+                    <div>
+                        <h1 className="text-2xl font-bold">Appointments</h1>
+                        <p className="text-gray-500 text-sm">
+                            Viewing : <span className="font-semibold text-blue-500">{viewing === today ? "Today" : viewing}</span>
+                        </p>
+                    </div>
                 </div>
 
                 <AppointmentActions />

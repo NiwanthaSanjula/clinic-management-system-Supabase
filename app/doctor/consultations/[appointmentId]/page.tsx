@@ -1,9 +1,10 @@
 // app/doctor/consultations/[appointmentId]/page.tsx
 
 import PatientProfileCard from "@/components/patients/PatientProfileCard"
+import VisitTimeline from "@/components/patients/VisitTimeline"
 import { prisma } from "@/lib/prisma"
 import { requireDoctor } from "@/lib/services/authService"
-import { getConsultationByAppointmentId, getMedicines } from "@/lib/services/consultationService"
+import { getConsultationByAppointmentId, getMedicines, getPatientVisitHistory } from "@/lib/services/consultationService"
 import { getPatientById } from "@/lib/services/patientService"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -32,10 +33,11 @@ export default async function ConsultationPage({ params }: Props) {
         await updateAppointmentStatus(appointmentId, "IN_CONSULTATION")
     }
 
-    const [patient, consultation, medicines] = await Promise.all([
+    const [patient, consultation, medicines, visitHistory] = await Promise.all([
         getPatientById(appointment.patientId),
         getConsultationByAppointmentId(appointmentId),
-        getMedicines()
+        getMedicines(),
+        getPatientVisitHistory(appointment.patientId)
     ])
 
     if (!patient) notFound()
@@ -62,7 +64,7 @@ export default async function ConsultationPage({ params }: Props) {
 
     return (
         <div className="min-h-screen bg-slate-50/60">
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+            <div className="px-4 py-6 space-y-5 w-full">
 
                 {/* --- Top nav bar ---*/}
                 <div className="flex items-center justify-between">
@@ -91,27 +93,43 @@ export default async function ConsultationPage({ params }: Props) {
                     </div>
                 </div>
 
-                {/* --- Patient card --- */}
-                <PatientProfileCard patient={patient} accentColor="blue" />
-
-                {/* --- Consultation status pill (if editing) --- */}
-                {existing && (
-                    <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                            Editing existing consultation
-                        </span>
+                <div className="grid grid-cols-1 md:grid-cols-[0.5fr_1.5fr_1fr] items-start gap-2">
+                    {/* --- Patient card --- */}
+                    <div className="sticky top-4">
+                        <PatientProfileCard patient={patient} accentColor="blue" />
                     </div>
-                )}
 
-                {/* --- Form --- */}
-                <ConsultationForm
-                    appointmentId={appointmentId}
-                    patientId={appointment.patientId}
-                    medicines={medicines}
-                    existing={existing}
-                    canComplete={canComplete}
-                />
+                    <div className=" space-y-2">
+                        {/* --- Consultation status pill (if editing) --- */}
+                        {existing && (
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                                    Editing existing consultation
+                                </span>
+                            </div>
+                        )}
+
+                        {/* --- Form --- */}
+                        <ConsultationForm
+                            appointmentId={appointmentId}
+                            patientId={appointment.patientId}
+                            medicines={medicines}
+                            existing={existing}
+                            canComplete={canComplete}
+                        />
+                    </div>
+
+                    {/* --- Previous visit history --- */}
+                    <div className="sticky top-4 md:col-span-1">
+                        <div className="sticky top-4">
+                            <VisitTimeline visits={visitHistory} role="DOCTOR" />
+                        </div>
+                    </div>
+                </div>
+
+
+
 
 
             </div>
