@@ -54,6 +54,10 @@ export default function ConsultationForm({
     function onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
         const formData = new FormData(e.currentTarget)
+        const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+        if (submitter?.name) {
+            formData.append(submitter.name, submitter.value)
+        }
         startTransition(() => formAction(formData))
     }
 

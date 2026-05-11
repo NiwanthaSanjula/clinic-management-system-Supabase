@@ -25,14 +25,13 @@ export default async function PortalDashboard() {
     const latest = vitals[0] ?? null
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6 p-4">
+        <div className="space-y-6 p-4">
 
             {/* Welcome */}
             <div>
                 <h1 className="text-2xl font-bold">Welcome, {profile.name}</h1>
                 <p className="text-gray-500 text-sm">Your health portal</p>
             </div>
-            <LogoutButton />
 
             {/* Allergy warning — always visible if exists */}
             {patient.knownAllergies && (

@@ -25,20 +25,26 @@ export default async function DoctorPatientProfilePage({ params }: Props) {
     if (!patient) notFound()
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
 
             {/* Back only — no edit button for doctor */}
             <Link href="/doctor/patients" className="text-gray-400 hover:text-gray-600">
                 ← Back
             </Link>
 
-            {/* Shared profile card — blue theme for doctor */}
-            <PatientProfileCard patient={patient} accentColor="blue" />
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-2">
+                <div className="space-y-2">
+                    {/* Shared profile card — blue theme for doctor */}
+                    <PatientProfileCard patient={patient} accentColor="blue" />
 
-            {/* Doctor gets read-only vitals history */}
-            <VitalsHistory vitals={vitals} accentColor="purple" />
+                    {/* Doctor gets read-only vitals history */}
+                    <VitalsHistory vitals={vitals} accentColor="purple" />
 
-            <VisitTimeline visits={visitHistory} role="DOCTOR" />
+                </div>
+                <VisitTimeline visits={visitHistory} role="DOCTOR" />
+            </div>
+
+
 
             <p className="text-xs text-gray-400 text-right">
                 Registered: {new Date(patient.createdAt).toLocaleDateString()}

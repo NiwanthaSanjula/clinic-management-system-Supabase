@@ -14,7 +14,7 @@ export default async function BillingPage() {
 
 
     return (
-        <div className="space-y-4 max-w-4xl mx-auto">
+        <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center gap-3">
                 <CreditCard size={40} className="text-emerald-500" />
