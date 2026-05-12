@@ -20,6 +20,23 @@ enum Role {
   PATIENT
 }
 
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  WAIVED // doctor waived the fee
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+}
+
+enum StockMovementType {
+  IN // stock received
+  OUT // stock dispensed
+  ADJUSTMENT // manual correction
+}
+
 // Profile table - extends Supabase's built-in auth.users table
 // When a stafff member signs up, we create a Profile row
 // The id here MATCHES the id in Supabase Auth exactly
@@ -30,7 +47,9 @@ model Profile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  patient Patient? // only exists if role is PATIENT
+  patient       Patient? // only exists if role is PATIENT
+  consultations Consultation[]
+  prescriptions Prescription[] @relation("DoctorPrescriptions")
 
   @@map("profiles") // actual table name in supabase db
 }
@@ -53,9 +72,9 @@ model AuditLog {
 // Patient - people who visit the clinic
 // They can also have a portal account (patientAuthId links to Supabase auth)
 model Patient {
-  id             String    @id @default(cuid())
-  profile        Profile   @relation(fields: [id], references: [id])
-  nic            String    @unique
+  id             String         @id @default(cuid())
+  profile        Profile        @relation(fields: [id], references: [id])
+  nic            String         @unique
   dateOfBirth    DateTime?
   gender         String?
   phone          String
@@ -63,8 +82,250 @@ model Patient {
   address        String?
   bloodGroup     String?
   knownAllergies String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  vitals         Vitals[]
+  appointments   Appointment[]
+  consultations  Consultation[]
+  prescriptions  Prescription[]
+  invoices       Invoice[]
 
   @@map("patients")
+}
+
+model Vitals {
+  id            String   @id @default(cuid())
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id])
+  recordedBy    String // Assistant's profile id
+  bloodPressure String? // e.g. "120/80"
+  weight        Float? //kg
+  temperature   Float? // Celsius
+  pulse         Int? // bpm
+  notes         String?
+  recordedAt    DateTime @default(now())
+
+  @@map("vitals")
+}
+
+// Appointment status flow:
+// SCHEDULED -> WAITING -> IN_CONSULTATION -> COMPLETED
+//           -> CANCELLED (form any status)
+enum AppointmentStatus {
+  SCHEDULED
+  WAITING
+  IN_CONSULTATION
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentType {
+  BOOKED // has a time slot
+  WALKIN // no slot - added to queue directly
+}
+
+// Clinic working hours and slot configuration
+// Only ONE row ever exists - updated by doctor
+model ClinicSettings {
+  id           String @id @default(cuid())
+  openTime     String @default("09:00")
+  closeTime    String @default("17:00")
+  slotDuration Int    @default(20)
+  lunchStart   String @default("13:00")
+  lunchEnd     String @default("13:30")
+  clinicName   String @default("My Clinic")
+  consultFee   Float  @default(1000)
+
+  @@map("clinic_settings")
+}
+
+// One row per appointment
+model Appointment {
+  id           String            @id @default(cuid())
+  patientId    String
+  patient      Patient           @relation(fields: [patientId], references: [id])
+  date         String // "2026-05-01" -stored as string for simplicity
+  timeSlot     String? // "09:00" - null for walk-ins
+  type         AppointmentType   @default(BOOKED)
+  status       AppointmentStatus @default(SCHEDULED)
+  notes        String? // booking notes 
+  createdBy    String // profile id of who booked
+  createdAt    DateTime          @default(now())
+  updateAt     DateTime          @updatedAt
+  consultation Consultation?
+  invoice      Invoice?
+
+  // Prevent double bookings - same data + same slot = error
+  @@unique([date, timeSlot])
+  @@map("appointments")
+}
+
+// Medicine master list
+// Seeded once - doctor/assistant pick one from this list when prescribing
+model Medicine {
+  id            String  @id @default(cuid())
+  name          String // brand name "e.g. Panadol, Mylanta"
+  genericName   String // e.g. Paracetamol
+  category      String // e.g. Painkiller, Antibiotic
+  unit          String // tablet, capsule, ml, mg
+  defaultDosage String? // e.g. 1 tab 3 times a day
+  price         Float   @default(0)
+  isActive      Boolean @default(true) // soft delete 
+
+  prescriptionItems PrescriptionItem[]
+  batches           InventoryBatch[]
+  stockMovements    StockMovement[]
+
+  @@unique([name, genericName])
+  @@map("medicines")
+}
+
+// One consultation per appointment - created by doctor
+// Contains all clinical findings for the visit
+model Consultation {
+  id            String @id @default(cuid())
+  appointmentId String @unique // one-to-one with appointment
+  patientId     String
+  doctorId      String // profile id of doctor
+
+  // What the patient came in with
+  chiefComplaint String
+  symptoms       String?
+
+  // What the doctor found + concluded
+  clinicalNotes String?
+  diagnosis     String
+
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  // Relations
+  appointment  Appointment   @relation(fields: [appointmentId], references: [id])
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  doctor       Profile       @relation(fields: [doctorId], references: [id])
+  prescription Prescription? // may or may not have a prescription
+
+  @@map("consultations")
+}
+
+// Prescription header - one per consultation
+// Links to the individual medicine items
+model Prescription {
+  id             String @id @default(cuid())
+  consultationId String @unique // one-to-one with consultation
+  patientId      String
+  doctorId       String
+
+  status PrescriptionStatus @default(PENDING)
+  notes  String? // general prescription notes
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  consultation Consultation       @relation(fields: [consultationId], references: [id])
+  patient      Patient            @relation(fields: [patientId], references: [id])
+  doctor       Profile            @relation("DoctorPrescriptions", fields: [doctorId], references: [id])
+  items        PrescriptionItem[]
+
+  @@map("prescriptions")
+}
+
+// One row per medicine in a prescription
+model PrescriptionItem {
+  id             String @id @default(cuid())
+  prescriptionId String
+  medicineId     String
+
+  dosage       String // e.g. "500mg"
+  frequency    String // e.g. "3 times daily"
+  duration     String // e.g. "5 days"
+  quantity     Int // total units to dispense
+  instructions String? // e.g."Tale after meals"
+
+  // Relations
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  medicine     Medicine     @relation(fields: [medicineId], references: [id])
+
+  @@map("prescription_items")
+}
+
+enum PrescriptionStatus {
+  PENDING // written, not yet dispensed
+  DISPENSED // dispensed to patient
+  PARTIAL // some items given
+}
+
+// One invoice per appointment - auto created when appointment COMPLETED
+model Invoice {
+  id              String         @id @default(cuid())
+  patientId       String
+  appointmentId   String         @unique
+  consultationFee Float // copies from ClinicSettings at time of invoice
+  medicineTotal   Float          @default(0)
+  totalAmount     Float // consultationFee + medicineTotal
+  status          InvoiceStatus  @default(UNPAID)
+  paymentMethod   PaymentMethod?
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime       @default(now())
+
+  // Relations
+  patient     Patient       @relation(fields: [patientId], references: [id])
+  appointment Appointment   @relation(fields: [appointmentId], references: [id])
+  items       InvoiceItem[]
+
+  @@map("invoices")
+}
+
+// One row per line item on the invoice
+// e.g."Consultation Fee", "Pendol x10"
+model InvoiceItem {
+  id          String @id @default(cuid())
+  invoiceId   String
+  description String // e.g."Penadol (Paracetmol) x10 tablets"
+  quantity    Int    @default(1)
+  unitPrice   Float // quantity x unit price
+  total       Float // quantity * unitPrice
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_items")
+}
+
+// One batch ber medicine delivery
+// FEFO = we always deduct from soonest-expiring batch first
+
+model InventoryBatch {
+  id           String   @id @default(cuid())
+  medicineId   String
+  batchNumber  String
+  quantity     Int // remaining quantity in this batch
+  unitCost     Float // buying price per unit
+  expiryDate   DateTime
+  receivedDate DateTime @default(now())
+  notes        String?
+
+  medicine  Medicine        @relation(fields: [medicineId], references: [id])
+  movements StockMovement[]
+
+  @@map("inventory_batches")
+}
+
+// Every stock change is recorded here — full audit trail
+// Tells exactly why stock changed and when
+model StockMovement {
+  id          String            @id @default(cuid())
+  medicineId  String
+  batchId     String
+  type        StockMovementType
+  quantity    Int // always positive — type tells direction
+  reason      String // e.g. "prescription_dispensed", "stock_received"
+  referenceId String? // invoiceId or batchId depending on reason
+  createdBy   String // profileId of who did this
+  createdAt   DateTime          @default(now())
+
+  medicine Medicine       @relation(fields: [medicineId], references: [id])
+  batch    InventoryBatch @relation(fields: [batchId], references: [id])
+
+  @@map("stock_movements")
 }

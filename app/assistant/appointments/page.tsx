@@ -1,0 +1,88 @@
+
+import { getAppointmentsByDate } from "@/lib/services/appointmentService"
+import { requireAssistant } from "@/lib/services/authService"
+import { ChevronLeft, ChevronRight, ClipboardClock } from "lucide-react"
+import Link from "next/link"
+import QueueBoard from "./QueueBoard"
+import DateNavigator from "./DateNavigator"
+import AppointmentActions from "./AppointmentActions"
+
+
+type Props = {
+    searchParams: Promise<{ date?: string }>
+}
+
+export default async function AppointmentsPage({ searchParams }: Props) {
+
+    await requireAssistant()
+
+    const { date } = await searchParams
+    const today = new Date().toISOString().split("T")[0]
+    const viewing = date ?? today
+
+    const appointments = await getAppointmentsByDate(viewing)
+
+    return (
+        <div className="space-y-4">
+            { /** --- header --- */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <ClipboardClock size={40} className="text-emerald-500" />
+                    <div>
+                        <h1 className="text-2xl font-bold">Appointments</h1>
+                        <p className="text-gray-500 text-sm">
+                            Viewing : <span className="font-semibold text-blue-500">{viewing === today ? "Today" : viewing}</span>
+                        </p>
+                    </div>
+                </div>
+
+                <AppointmentActions />
+            </div>
+
+            {/* --- Date navigation --- */}
+            <div className="flex items-center gap-2">
+                <Link
+                    href={`?date=${getPrevDate(viewing)}`}
+                    className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+                >
+                    <ChevronLeft size={20} />
+                </Link>
+
+                <DateNavigator viewing={viewing} today={today} />
+
+                <Link
+                    href={`?date=${getNextDate(viewing)}`}
+                    className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+                >
+                    <ChevronRight size={20} />
+                </Link>
+
+                {viewing !== today && (
+                    <Link
+                        href="?" className="text-blue-600 text-sm hover:underline"
+                    >
+                        Go to Today
+                    </Link>
+                )}
+            </div>
+
+            {/* Queue board — client component for status updates */}
+            <QueueBoard
+                appointments={appointments}
+                date={viewing}
+            />
+        </div>
+    )
+}
+
+function getPrevDate(date: string) {
+    const d = new Date(date)
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().split("T")[0]
+}
+
+function getNextDate(date: string) {
+    const d = new Date(date)
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().split("T")[0]
+}

@@ -1,27 +1,22 @@
 "use client"
 
-import { act, startTransition, useActionState, useState } from "react"
+import { startTransition, useActionState, useState } from "react"
 import { registerAction } from "./action"
 import AccountStep from "./steps/AccountStep"
 import PersonalStep from "./steps/PersonalStep"
 import MedicalStep from "./steps/MedicalStep"
-import { HeartPulse } from "lucide-react"
+import { HeartPulse, Check } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
+import loginImage from '@/public/LoginImage.jpg'
 
-// Step indicator labels
 const STEPS = ["Account", "Personal", "Medical"]
 
 export default function RegisterPage() {
     const [state, action, pending] = useActionState(registerAction, null)
-
-
-    // Current step
     const [step, setStep] = useState(0)
-
-    // collect data across all steps
     const [formData, setFormData] = useState<Record<string, string>>({})
 
-    // Hidden form ref - we submit programatically on final step
     function handleNext(fields: Record<string, string>) {
         setFormData(prev => ({ ...prev, ...fields }))
         setStep(prev => prev + 1)
@@ -31,70 +26,104 @@ export default function RegisterPage() {
         setStep(prev => prev - 1)
     }
 
-    // Final step submit - build FormData and call server action
     function handleFinalSubmit(fields: Record<string, string>) {
         const allData = { ...formData, ...fields }
         const fd = new FormData()
         Object.entries(allData).forEach(([k, v]) => fd.append(k, v))
-        // triggers useActionState  server action
-        startTransition(() => {
-            action(fd)
-        })
+        startTransition(() => { action(fd) })
     }
 
     return (
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md border border-gray-200 border-t-emerald-500 border-t-4">
-            <div className="text-center mb-6">
-                <div className="flex items-center gap-2 justify-center">
-                    <HeartPulse className="text-emerald-600" />
-                    <h1 className="text-2xl font-semibold text-emerald-500">Create Your Account</h1>
-                </div>
-                <p className="text-gray-500">Join us and manage your health</p>
-            </div>
+        <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 px-4 py-10">
+            <div className="w-full max-w-4xl flex rounded-2xl shadow-xl overflow-hidden border border-gray-100 bg-white">
 
-            {/* --- Step Indicator --- */}
-            <div className="flex items-center justify-between mb-6">
-                {STEPS.map((label, i) => (
-                    <div key={label} className="flex items-center gap-2">
-                        <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                                ${i < step ? "bg-emerald-500 text-white" : i === step ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-400"}
-                            `}
-                        >
-                            {i < step ? "✓" : i + 1}
-                        </div>
-                        <span
-                            className={`text-xs ${i === step ? "text-blue-500" : "text-gray-400"} font-bold`}
-                        >
-                            {label}
-                        </span>
-
-                        {/* Connector line between steps */}
-                        {i < STEPS.length - 1 && (
-                            <div className={`h-0.5 w-8 md:w-12 ${i < step ? "bg-emerald-500" : "bg-gray-400"}`} />
-
-                        )}
+                {/* --- Left Image Panel (hidden on mobile) --- */}
+                <div className="hidden md:block relative w-[45%] shrink-0 min-h-[600px]">
+                    <Image
+                        src={loginImage}
+                        fill
+                        alt="Health registration"
+                        className="object-cover"
+                        sizes="45vw"
+                        priority
+                    />
+                    {/* Overlay gradient for text legibility */}
+                    <div className="absolute inset-0 bg-linear-to-t from-emerald-900/60 via-transparent to-transparent" />
+                    <div className="absolute bottom-8 left-6 right-6 text-white">
+                        <p className="text-lg font-semibold leading-snug">Your health journey starts here.</p>
+                        <p className="text-sm text-emerald-100 mt-1">Manage appointments, records & more in one place.</p>
                     </div>
-                ))}
-            </div>
+                </div>
 
-            {/* Error from server action*/}
-            {state?.error && (
-                <p className="text-red-500 bg-red-500/15 border border-red-500/25 rounded text-center p-2 text-sm mb-4">
-                    {state.error}
-                </p>
-            )}
+                {/* --- Right Form Panel --- */}
+                <div className="flex-1 flex flex-col justify-center p-6 sm:px-10">
 
-            {/* Render current step */}
-            {step === 0 && <AccountStep data={formData} onNext={handleNext} />}
-            {step === 1 && <PersonalStep data={formData} onNext={handleNext} onBack={handleBack} />}
-            {step === 2 && <MedicalStep data={formData} onBack={handleBack} onSubmit={handleFinalSubmit} pending={pending} />}
+                    {/* Header */}
+                    <div className="mb-8">
+                        <div className="flex items-center gap-2 mb-1">
+                            <HeartPulse className="text-emerald-500 w-5 h-5" />
+                            <span className="text-sm font-semibold text-emerald-500 tracking-wide uppercase">HealthCare Portal</span>
+                        </div>
+                        <h1 className="text-2xl font-bold text-gray-800">Create Your Account</h1>
+                        <p className="text-sm text-gray-500 mt-1">Join us and take control of your health.</p>
+                    </div>
 
-            <div className="mt-4 text-center text-sm flex items-center gap-2 justify-center">
-                <p className="text-gray-500">Already have an account?</p>
-                <Link href="/login" className="text-blue-500 hover:underline">Log in here</Link>
+                    {/* --- Step Indicator --- */}
+                    <div className="flex items-center mb-8">
+                        {STEPS.map((label, i) => (
+                            <div key={label} className="flex items-center flex-1 last:flex-none">
+                                <div className="flex flex-col items-center gap-1">
+                                    <div
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300
+                                            ${i < step
+                                                ? "bg-emerald-500 text-white"
+                                                : i === step
+                                                    ? "bg-emerald-500 text-white ring-4 ring-emerald-100"
+                                                    : "bg-gray-100 text-gray-400"
+                                            }`}
+                                    >
+                                        {i < step ? <Check className="w-4 h-4" /> : i + 1}
+                                    </div>
+                                    <span className={`text-[11px] font-semibold whitespace-nowrap
+                                        ${i === step ? "text-emerald-600" : i < step ? "text-emerald-500" : "text-gray-400"}`}>
+                                        {label}
+                                    </span>
+                                </div>
+
+                                {/* Connector */}
+                                {i < STEPS.length - 1 && (
+                                    <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all duration-300
+                                        ${i < step ? "bg-emerald-400" : "bg-gray-200"}`}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Server error */}
+                    {state?.error && (
+                        <div className="mb-5 flex items-start gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">
+                            <span className="mt-0.5">⚠</span>
+                            <span>{state.error}</span>
+                        </div>
+                    )}
+
+                    {/* Step Content */}
+                    <div>
+                        {step === 0 && <AccountStep data={formData} onNext={handleNext} />}
+                        {step === 1 && <PersonalStep data={formData} onNext={handleNext} onBack={handleBack} />}
+                        {step === 2 && <MedicalStep data={formData} onBack={handleBack} onSubmit={handleFinalSubmit} pending={pending} />}
+                    </div>
+
+                    {/* Footer */}
+                    <p className="mt-6 text-center text-sm text-gray-500">
+                        Already have an account?{" "}
+                        <Link href="/login" className="text-emerald-600 font-medium hover:underline">
+                            Log in here
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     )
-
 }

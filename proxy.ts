@@ -1,3 +1,5 @@
+// proxy.ts (middleware)
+
 // This run on EVERY REQUEST before the page loads
 // it checks: are you logged in? what is your role?
 // Then decides: let you through or redirect

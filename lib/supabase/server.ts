@@ -1,3 +1,5 @@
+// lib/supabase/server.ts
+
 // This client runs ON THE SERVER (NextJs server components, API routes)
 // It reads cookies to know who is logged in
 // Never run in browser
