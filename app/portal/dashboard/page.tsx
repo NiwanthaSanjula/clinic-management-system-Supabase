@@ -4,19 +4,21 @@ import VisitTimeline from "@/components/patients/VisitTimeline"
 import { requirePatient } from "@/lib/services/authService"
 import { getPatientPrescriptions, getPatientVisitHistory } from "@/lib/services/consultationService"
 import { getPatientByAuthId, getPatientVitals } from "@/lib/services/patientService"
-import { ActivityIcon, AlertTriangle, CreditCard, FileText, User } from "lucide-react"
+import { ActivityIcon, AlertTriangle, Calendar, CreditCard, FileText, User } from "lucide-react"
 import Link from "next/link"
 import { getPatientInvoices } from "@/lib/services/billingService"
+import { getPatientAppointments } from "@/lib/services/appointmentService"
 
 export default async function PortalDashboard() {
     const profile = await requirePatient()
 
-    const [patient, vitals, visitHistory, prescriptions, invoices] = await Promise.all([
+    const [patient, vitals, visitHistory, prescriptions, invoices, appointments] = await Promise.all([
         getPatientByAuthId(profile.id),
         getPatientVitals(profile.id),
         getPatientVisitHistory(profile.id),
         getPatientPrescriptions(profile.id),
         getPatientInvoices(profile.id),
+        getPatientAppointments(profile.id),
     ])
 
     if (!patient) return null;
@@ -86,6 +88,20 @@ export default async function PortalDashboard() {
                     </div>
                 </div>
             )}
+
+            <Link href="/portal/appointments"
+                className="bg-white border rounded-lg p-4 hover:bg-gray-50
+        flex items-center gap-3">
+                <Calendar size={20} className="text-blue-500" />
+                <div>
+                    <p className="font-medium text-sm">Appointments</p>
+                    <p className="text-xs text-gray-400">
+                        {appointments.filter(a =>
+                            !["COMPLETED", "CANCELLED"].includes(a.status)
+                        ).length} upcoming
+                    </p>
+                </div>
+            </Link>
 
             <VisitTimeline visits={visitHistory} role="PATIENT" />
 

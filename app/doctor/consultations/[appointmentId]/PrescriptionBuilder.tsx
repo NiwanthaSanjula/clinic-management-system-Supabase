@@ -1,8 +1,8 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react"
 import { useState } from "react"
 
 type Medicine = {
@@ -44,6 +44,8 @@ let localIdCounter = 0
 
 export default function PrescriptionBuilder({ medicines, initialItems = [] }: Props) {
     const [rows, setRows] = useState<PrescriptionRow[]>(initialItems)
+    const [aiLoading, setAiLoading] = useState(false)
+    const [aiError, setAiError] = useState<string | null>(null)
 
     const byCategory = medicines.reduce((acc, med) => {
         if (!acc[med.category]) acc[med.category] = []
@@ -82,6 +84,63 @@ export default function PrescriptionBuilder({ medicines, initialItems = [] }: Pr
                 dosage: medicine?.defaultDosage ?? ""
             } : r
         ))
+    }
+
+    async function handleAISuggest() {
+        // Get diagnosis from the parent form
+        // Read it from the DOM since it's in a sibling input
+        const diagnosisInput = document.querySelector(
+            'input[name="diagnosis"]'
+        ) as HTMLInputElement
+        const diagnosis = diagnosisInput?.value?.trim()
+
+        if (!diagnosis) {
+            setAiError("Please fill in the diagnosis field first")
+            return
+        }
+
+        setAiLoading(true)
+        setAiError(null)
+
+        try {
+            const res = await fetch("/api/ai/prescriptions/suggest", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ diagnosis }),
+            })
+
+            const data = await res.json()
+
+            if (!res.ok) {
+                setAiError(data.error ?? "AI suggestion failed")
+                return
+            }
+
+            if (data.items.length === 0) {
+                setAiError("No suitable medicines found for this diagnosis")
+                return
+            }
+
+            // Map AI response to PrescriptionRow format
+            const newRows: PrescriptionRow[] = data.items.map((item: any) => ({
+                localId: localIdCounter++,
+                medicineId: item.medicineId,
+                dosage: item.dosage,
+                frequency: item.frequency,
+                duration: item.duration,
+                quantity: item.quantity,
+                instructions: item.instructions,
+            }))
+
+            // Replace current rows with AI suggestion
+            // Doctor can still add/remove/edit after
+            setRows(newRows)
+
+        } catch (error) {
+            setAiError("Something went wrong. Please try again.")
+        } finally {
+            setAiLoading(false)
+        }
     }
 
     return (
@@ -214,6 +273,52 @@ export default function PrescriptionBuilder({ medicines, initialItems = [] }: Pr
                     </div>
                 </div>
             ))}
+
+            {/* AI Suggest button — shown always */}
+            <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-400">
+                    {rows.length > 0
+                        ? `${rows.length} medicine${rows.length !== 1 ? "s" : ""} added`
+                        : "No medicines added yet"
+                    }
+                </p>
+
+                <button
+                    type="button"
+                    onClick={handleAISuggest}
+                    disabled={aiLoading}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg
+            bg-purple-50 text-purple-600 border border-purple-200
+            hover:bg-purple-100 transition-colors disabled:opacity-50"
+                >
+                    {aiLoading ? (
+                        <>
+                            <Loader2 size={12} className="animate-spin" />
+                            Thinking...
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles size={12} />
+                            AI Suggest
+                        </>
+                    )}
+                </button>
+            </div>
+
+            {/* AI error */}
+            {aiError && (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200
+                                rounded-lg px-3 py-2">
+                    {aiError}
+                </p>
+            )}
+
+            {/* AI disclaimer — always visible when rows exist */}
+            {rows.length > 0 && (
+                <p className="text-xs text-gray-400 italic">
+                    ✦ AI suggestions — please review before saving
+                </p>
+            )}
 
             <button
                 type="button"

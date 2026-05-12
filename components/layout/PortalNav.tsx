@@ -8,12 +8,13 @@ import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import {
     HeartPulse, LayoutDashboard, Activity,
-    FileText, CreditCard, User, LogOut
+    FileText, CreditCard, User, LogOut, Calendar
 } from "lucide-react"
 import { useState } from "react"
 
 const NAV_ITEMS = [
     { label: "Home", href: "/portal/dashboard", icon: <LayoutDashboard size={15} /> },
+    { label: "Appointments", href: "/portal/appointments", icon: <Calendar size={15} /> }, // ← add
     { label: "Vitals", href: "/portal/vitals", icon: <Activity size={15} /> },
     { label: "Prescriptions", href: "/portal/prescriptions", icon: <FileText size={15} /> },
     { label: "Payments", href: "/portal/payments", icon: <CreditCard size={15} /> },

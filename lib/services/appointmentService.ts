@@ -249,3 +249,46 @@ export async function getDoctorQueue(date: string) {
         ]
     })
 }
+
+// Get all appointments for a patient — for portal view
+export async function getPatientAppointments(patientId: string) {
+    return prisma.appointment.findMany({
+        where: { patientId },
+        orderBy: [
+            { date: "desc" },
+            { createdAt: "desc" }
+        ],
+    })
+}
+
+// Book appointment from patient portal
+// Patient books for themselves — no assistant needed
+export async function createPortalAppointment(data: {
+    patientId: string
+    date: string
+    timeSlot: string
+    notes?: string
+}) {
+    // Check slot available
+    const existing = await prisma.appointment.findUnique({
+        where: {
+            date_timeSlot: {
+                date: data.date,
+                timeSlot: data.timeSlot,
+            }
+        }
+    })
+    if (existing) throw new Error("This slot was just taken. Please choose another.")
+
+    return prisma.appointment.create({
+        data: {
+            patientId: data.patientId,
+            date: data.date,
+            timeSlot: data.timeSlot,
+            type: "BOOKED",
+            status: "SCHEDULED",
+            notes: data.notes,
+            createdBy: data.patientId, // patient booked themselves
+        }
+    })
+}

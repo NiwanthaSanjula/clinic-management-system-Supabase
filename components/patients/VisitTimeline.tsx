@@ -4,6 +4,7 @@
 // role prop controls what details are shown
 
 import { Calendar, Clock, Pill, ChevronDown, Stethoscope } from "lucide-react"
+import VisitSummaryAI from "./VisitSummaryAI"
 
 type PrescriptionItem = {
     id: string
@@ -189,6 +190,10 @@ function VisitCard({ visit, role, isLast }: { visit: Visit; role: Props["role"];
                         )}
 
                         <InfoBlock label="Diagnosis" value={consultation.diagnosis} />
+
+                        {role === "PATIENT" && consultation.id && (
+                            <VisitSummaryAI consultationId={consultation.id} />
+                        )}
 
                         {prescription && prescription.items.length > 0 && (
                             <div>
