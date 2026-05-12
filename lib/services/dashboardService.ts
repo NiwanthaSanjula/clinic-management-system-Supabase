@@ -249,8 +249,36 @@ export async function getAuditLogs({
         })
     ])
 
+    // Resolve user names for non-system actors
+    const userIds = [...new Set(
+        logs
+            .map(l => l.userId)
+            .filter(id => id !== "system")
+    )]
+
+    // Batch fetch profiles for all actors in this page
+    const profiles = userIds.length > 0
+        ? await prisma.profile.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, name: true, role: true }
+        })
+        : []
+
+    const profileMap = new Map(profiles.map(p => [p.id, p]))
+
+    // Attach name to each log entry
+    const logsWithNames = logs.map(log => ({
+        ...log,
+        actorName: log.userId === "system"
+            ? "System"
+            : profileMap.get(log.userId)?.name ?? "Unknown",
+        actorRole: log.userId === "system"
+            ? null
+            : profileMap.get(log.userId)?.role ?? null,
+    }))
+
     return {
-        logs,
+        logs: logsWithNames,
         total,
         totalPages: Math.ceil(total / perPage),
         currentPage: page,

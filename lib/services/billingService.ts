@@ -176,18 +176,47 @@ export async function getInvoiceByAppointmentId(appointmentId: string) {
     })
 }
 
-// Mark invoice as paid
 export async function markInvoicePaid(
     invoiceId: string,
     paymentMethod: "CASH" | "CARD"
 ) {
-    return prisma.invoice.update({
-        where: { id: invoiceId },
-        data: {
-            status: "PAID",
-            paymentMethod,
-            paidAt: new Date()
+    return prisma.$transaction(async (tx) => {
+        // Mark invoice paid
+        const invoice = await tx.invoice.update({
+            where: { id: invoiceId },
+            data: {
+                status: "PAID",
+                paymentMethod,
+                paidAt: new Date(),
+            }
+        })
+
+        // Find prescription linked to this appointment
+        // and mark it as DISPENSED
+        const consultation = await tx.consultation.findUnique({
+            where: { appointmentId: invoice.appointmentId },
+            select: { prescription: { select: { id: true } } }
+        })
+
+        if (consultation?.prescription?.id) {
+            await tx.prescription.update({
+                where: { id: consultation.prescription.id },
+                data: { status: "DISPENSED" }
+            })
         }
+
+        // Audit log
+        await tx.auditLog.create({
+            data: {
+                userId: "system",
+                action: "MARK_INVOICE_PAID",
+                entityType: "invoice",
+                entityId: invoiceId,
+                newValue: { paymentMethod, status: "PAID" }
+            }
+        })
+
+        return invoice
     })
 }
 
@@ -207,3 +236,5 @@ export async function getPatientInvoices(patientId: string) {
     })
 
 }
+
+

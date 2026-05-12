@@ -31,7 +31,7 @@ export default async function AuditLogPage({ searchParams }: Props) {
     })
 
     return (
-        <div className="space-y-4 max-w-5xl mx-auto">
+        <div className="space-y-4 mx-auto">
 
             {/* Header */}
             <div className="flex items-center gap-3">
@@ -85,12 +85,15 @@ export default async function AuditLogPage({ searchParams }: Props) {
                                         </p>
                                     </td>
 
-                                    {/* Who did it */}
-                                    <td className="px-4 py-3 font-mono text-gray-500">
-                                        {log.userId === "system"
-                                            ? <span className="text-gray-400 italic">system</span>
-                                            : log.userId.slice(0, 8) + "..."
-                                        }
+                                    <td className="px-4 py-3">
+                                        <p className="font-medium text-gray-700">
+                                            {log.actorName}
+                                        </p>
+                                        {log.actorRole && (
+                                            <p className="text-gray-400 text-xs capitalize">
+                                                {log.actorRole.toLowerCase()}
+                                            </p>
+                                        )}
                                     </td>
 
                                     {/* What changed */}
